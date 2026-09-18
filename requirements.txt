@@ -5,3 +5,5 @@ torchvision>=0.16,<1
 tqdm>=4.66,<5
 matplotlib>=3.7,<4
 jupyterlab>=4,<5
+mlx>=0.25,<1; platform_system == "Darwin" and platform_machine == "arm64"
+pytest>=8,<9

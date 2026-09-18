@@ -10,6 +10,7 @@ checkpoints, or notebooks.
 | Dataset | Task | Location |
 |---|---|---|
 | MNIST | Digit classification | [`examples/mnist/digit-classification`](examples/mnist/digit-classification) |
+| Tiny Shakespeare | Character language modeling | [`examples/tiny-shakespeare/character-language-model`](examples/tiny-shakespeare/character-language-model) |
 
 ## Repository layout
 
