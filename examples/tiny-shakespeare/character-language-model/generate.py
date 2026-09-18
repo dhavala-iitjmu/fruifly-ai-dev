@@ -12,7 +12,8 @@ def load(run: Path):
     cfg=json.loads((run/"config.json").read_text())
     meta=json.loads((Path(cfg["data_dir"])/"meta.json").read_text())
     adj=np.load(run/"adjacency.npy")
-    model=ConnectomeLM(adj,cfg["vocab_size"],cfg["embedding_dim"],cfg["recurrent_steps"])
+    model=ConnectomeLM(adj,cfg["vocab_size"],cfg["embedding_dim"],cfg["recurrent_steps"],
+                       cfg.get("layers",1),cfg.get("adapter_dim",64),cfg.get("readout_blocks",0))
     model.load_weights(str(run/"best.safetensors")); model.eval()
     return model,meta,cfg
 

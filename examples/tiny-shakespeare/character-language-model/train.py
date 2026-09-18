@@ -39,12 +39,17 @@ def evaluate(model, data, batch, context, count, seed):
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("--graph", default="synthetic")
+    p.add_argument("--graph-cache", type=Path,
+                   help="Reuse neuron_ids.npy and adjacency.npy from an earlier run")
     p.add_argument("--data-dir", type=Path, default=Path("data"))
     p.add_argument("--output", type=Path, default=Path("runs/latest"))
     p.add_argument("--neurons", type=int, default=256)
     p.add_argument("--embedding-dim", type=int, default=32)
     p.add_argument("--context-length", type=int, default=64)
     p.add_argument("--recurrent-steps", type=int, default=1)
+    p.add_argument("--layers", type=int, default=1)
+    p.add_argument("--adapter-dim", type=int, default=64)
+    p.add_argument("--readout-blocks", type=int, default=0)
     p.add_argument("--edge-threshold", type=int, default=5)
     p.add_argument("--batch-size", type=int, default=32)
     p.add_argument("--iterations", type=int, default=500)
@@ -55,8 +60,15 @@ def main():
     meta=json.loads((args.data_dir/"meta.json").read_text())
     train=np.load(args.data_dir/"train.npy", mmap_mode="r")
     val=np.load(args.data_dir/"val.npy", mmap_mode="r")
-    ids, adjacency=build_graph(args.graph,args.neurons,args.edge_threshold,args.seed)
-    model=ConnectomeLM(adjacency,meta["vocab_size"],args.embedding_dim,args.recurrent_steps)
+    if args.graph_cache:
+        ids=np.load(args.graph_cache/"neuron_ids.npy")
+        adjacency=np.load(args.graph_cache/"adjacency.npy")
+        if len(ids) != args.neurons:
+            raise ValueError(f"Graph cache has {len(ids)} nodes, expected {args.neurons}")
+    else:
+        ids, adjacency=build_graph(args.graph,args.neurons,args.edge_threshold,args.seed)
+    model=ConnectomeLM(adjacency,meta["vocab_size"],args.embedding_dim,args.recurrent_steps,
+                       args.layers,args.adapter_dim,args.readout_blocks)
     optimizer=optim.AdamW(learning_rate=args.learning_rate, weight_decay=1e-4)
     loss_and_grad=nn.value_and_grad(model,loss_fn)
     args.output.mkdir(parents=True,exist_ok=True); np.save(args.output/"neuron_ids.npy",ids)
@@ -72,8 +84,8 @@ def main():
             history.append(row); print(json.dumps(row))
             if val_loss<best:
                 best=val_loss; model.save_weights(str(args.output/"best.safetensors"))
-                config=vars(args)|{"data_dir":str(args.data_dir),"output":str(args.output),
-                                   "vocab_size":meta["vocab_size"],"backend":"mlx","best_val_loss":best}
+                config={k: str(v) if isinstance(v,Path) else v for k,v in vars(args).items()}
+                config|={"vocab_size":meta["vocab_size"],"backend":"mlx","best_val_loss":best}
                 (args.output/"config.json").write_text(json.dumps(config,indent=2)+"\n")
     (args.output/"metrics.json").write_text(json.dumps({"history":history,"best_val_loss":best},indent=2)+"\n")
 

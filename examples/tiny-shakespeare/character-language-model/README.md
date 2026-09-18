@@ -37,11 +37,13 @@ python ../../../tools/download_connectome.py \
   --output ../../../data/connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather
 python train.py \
   --graph ../../../data/connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather \
-  --neurons 1024 --iterations 5000 --output runs/malecns
-python generate.py --run runs/malecns --prompt $'ROMEO:\n' --characters 500
+  --neurons 1024 --adapter-dim 128 --readout-blocks 1 \
+  --iterations 5000 --output runs/malecns-frozen-adapter
+python generate.py --run runs/malecns-frozen-adapter \
+  --prompt $'ROMEO:\n' --characters 500
 ```
 
-Outputs under `runs/latest/` include the best safetensors weights, graph,
+The selected `--output` directory contains the best safetensors weights, graph,
 selected node IDs, configuration and validation metrics. The configuration
 records `graph` and `backend` so synthetic and MaleCNS runs cannot be confused.
 
@@ -49,22 +51,34 @@ records `graph` and `backend` so synthetic and MaleCNS runs cannot be confused.
 
 ```text
 character -> 32-D embedding -> sensory projection
-          -> fixed recurrent connectome core -> 65-way readout
+          -> fixed recurrent connectome core
+          -> trainable residual GELU adapter -> 65-way readout
 ```
 
-Only the embedding, sensory projection and character readout are trained. The
-connectome adjacency stays fixed. Validation perplexity and elapsed time are
-reported during training.
+The adapter is a low-rank `1024 -> 128 -> 1024` block with GELU nonlinearity
+and a residual connection. The embedding, sensory projection, adapter and
+character readout are trained. The connectome adjacency is explicitly frozen
+with MLX's `Module.freeze`; a regression test verifies it is absent from
+`trainable_parameters()`.
 
-On the development Apple-silicon machine, a 256-node synthetic-graph run took
-about 25 seconds for 5,000 iterations. Its best validation perplexity was 8.65.
-These figures are a reproducibility check, not a benchmark against modern
-language models.
+The model remains causal. A bidirectional RNN was deliberately not used because
+it would expose future characters while predicting the next character and
+would therefore invalidate autoregressive generation.
 
-The verified real-connectome run selected 1,024 nodes from MaleCNS v1.0 and
-trained for 5,000 iterations in 96.6 seconds (excluding graph extraction). Its
-best validation perplexity was 10.34. The local checkpoint is
-`runs/malecns/best.safetensors`; generated artifacts remain Git-ignored.
+## Verified results
+
+Both runs use the same explicitly frozen 1,024-node MaleCNS graph with 27,709
+connections and the same validation split:
+
+| Model | Best validation perplexity | MLX training time |
+|---|---:|---:|
+| Fixed MaleCNS core, linear readout | 6.56 | 61.2 s |
+| Fixed MaleCNS core + residual GELU adapter | **6.35** | 89.7 s |
+
+The nonlinear adapter reduces perplexity by 3.2%. The preferred local
+checkpoint is `runs/malecns-frozen-adapter/best.safetensors`. Generated
+artifacts remain Git-ignored; these figures are reproducibility checks, not
+benchmarks against modern language models.
 
 ## Generate interactively
 
