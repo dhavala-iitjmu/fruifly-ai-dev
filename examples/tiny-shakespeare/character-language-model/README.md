@@ -33,10 +33,12 @@ python generate.py --prompt $'ROMEO:\n' --characters 500
 Use the official MaleCNS connectivity:
 
 ```bash
-python ../../../tools/download_connectome.py
+python ../../../tools/download_connectome.py \
+  --output ../../../data/connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather
 python train.py \
-  --graph data/connectome-weights-male-cns-v1.0-minconf-0.5.feather \
-  --neurons 1024 --iterations 1000
+  --graph ../../../data/connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather \
+  --neurons 1024 --iterations 5000 --output runs/malecns
+python generate.py --run runs/malecns --prompt $'ROMEO:\n' --characters 500
 ```
 
 Outputs under `runs/latest/` include the best safetensors weights, graph,
@@ -58,6 +60,11 @@ On the development Apple-silicon machine, a 256-node synthetic-graph run took
 about 25 seconds for 5,000 iterations. Its best validation perplexity was 8.65.
 These figures are a reproducibility check, not a benchmark against modern
 language models.
+
+The verified real-connectome run selected 1,024 nodes from MaleCNS v1.0 and
+trained for 5,000 iterations in 96.6 seconds (excluding graph extraction). Its
+best validation perplexity was 10.34. The local checkpoint is
+`runs/malecns/best.safetensors`; generated artifacts remain Git-ignored.
 
 ## Generate interactively
 

@@ -29,6 +29,9 @@ requirements.txt
 Each example owns its training code, notebooks, `data/` directory, and `runs/`
 directory. Generated data and checkpoints are intentionally ignored by Git.
 Shared utilities belong under `tools/`.
+The official MaleCNS connectivity table, when downloaded, is stored once under
+`data/connectome/` and shared by examples through a relative path. This large
+source artifact is intentionally excluded from Git.
 
 ## Setup
 
