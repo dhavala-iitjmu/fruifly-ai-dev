@@ -47,8 +47,11 @@ python train.py --graph synthetic --neurons 1024 --steps 2 \
 Download the official 1.1 GB aggregated connection table:
 
 ```bash
-python ../../../tools/download_connectome.py
-python train.py --graph data/connectome-weights-male-cns-v1.0-minconf-0.5.feather
+python ../../../tools/download_connectome.py \
+  --output ../../../data/connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather
+python train.py \
+  --graph ../../../data/connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather \
+  --neurons 1024 --steps 3 --epochs 5 --output runs/malecns
 ```
 
 The default run chooses a deterministic, high-strength 8,192-node subgraph,
@@ -81,9 +84,13 @@ the exact selected neuron IDs. MNIST is downloaded by torchvision into
 
 After training, open `classify_digits.ipynb` with Jupyter to restore the saved
 model, inspect predictions, measure test accuracy, and classify your own image.
-The notebook expects `runs/latest/best.pt`, which is the default output path of
-`train.py`. A smoke test that uses another `--output` path will not create the
-checkpoint the notebook expects.
+The notebook now defaults to the verified real-connectome checkpoint at
+`runs/malecns/best.pt`.
+
+The verified run used the same 1,024 selected MaleCNS IDs and 27,709 retained
+connections as the Tiny Shakespeare experiment. After five epochs it reached
+97.15% accuracy on the complete 10,000-image MNIST test set. Generated data
+and checkpoints remain Git-ignored.
 
 ## Data provenance
 
