@@ -1,91 +1,55 @@
-# MNIST through the MaleCNS fruit-fly connectome
+# Fruit-fly AI experiments
 
-This experiment uses the released **MaleCNS v1.0 connection graph** as a fixed
-sparse recurrent reservoir. MNIST pixels stimulate reservoir neurons and a
-small, trainable linear layer reads out one of ten digits.
+Experiments that apply the Janelia MaleCNS v1.0 fruit-fly connectome to
+machine-learning tasks. The repository is organized by **dataset**, then by
+**task**, so additional experiments can be added without mixing their models,
+checkpoints, or notebooks.
 
-This is deliberately described as *connectome-constrained reservoir
-computing*, not as training a scanned fly brain. MaleCNS is a static wiring
-diagram (neuron IDs and synapse counts), not a released executable brain or a
-set of learned weights. The activation dynamics, image-to-neuron mapping, and
-classifier below are engineering choices.
+## Examples
 
-## Relationship to Haltere
+| Dataset | Task | Location |
+|---|---|---|
+| MNIST | Digit classification | [`examples/mnist/digit-classification`](examples/mnist/digit-classification) |
 
-[Haltere](https://github.com/skulitom/haltere) is the useful reference for this
-style of experiment. It builds a 30,000-neuron flight circuit from MaleCNS,
-uses neurotransmitter predictions to fix connection signs, injects telemetry
-into annotated sensory populations, and reads controls from annotated wing
-motor populations. It then trains connection and neuron dynamics while
-regularizing them toward the connectome prior.
+## Repository layout
 
-This MNIST project is intentionally smaller: it uses the same official
-MaleCNS connection table but selects a generic high-strength subgraph, maps
-pixels through a learned encoder, keeps recurrent graph weights fixed, and
-learns a ten-class readout. Consequently it demonstrates connectome-constrained
-classification; it does not reuse Haltere's drone checkpoint or claim that a
-biological fly recognizes handwritten digits.
+```text
+examples/
+  mnist/
+    digit-classification/
+      README.md
+      train.py
+      classify_digits.ipynb
+tools/
+  download_connectome.py
+requirements.txt
+```
 
-## Quick start
+Each example owns its training code, notebooks, `data/` directory, and `runs/`
+directory. Generated data and checkpoints are intentionally ignored by Git.
+Shared utilities belong under `tools/`.
 
-Python 3.10+ is recommended.
+## Setup
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-
-# End-to-end smoke test; no large download and no network needed.
-python train.py --graph synthetic --neurons 1024 --steps 2 \
-  --epochs 1 --train-limit 2000 --test-limit 500
 ```
 
-## Run with the real MaleCNS graph
-
-Download the official 1.1 GB aggregated connection table:
+Then enter an example directory and follow its README:
 
 ```bash
-python download_connectome.py
-python train.py --graph data/connectome-weights-male-cns-v1.0-minconf-0.5.feather
+cd examples/mnist/digit-classification
 ```
 
-The default run chooses a deterministic, high-strength 8,192-node subgraph,
-which is practical on a laptop with several GB of free memory. It retains only
-edges whose two endpoints are in that set, normalizes incoming weights, applies
-a fixed random sign to each source (the connectivity table itself contains
-counts, not synapse signs), and trains only the input projection and linear
-readout. Some nodes in the complete flat table may be untraced segments, so
-"node" is more precise here than claiming every selected ID is a curated neuron.
+## Scientific scope
 
-For a larger experiment (more RAM and compute):
-
-```bash
-python train.py --graph data/connectome-weights-male-cns-v1.0-minconf-0.5.feather \
-  --neurons 32768 --steps 4 --epochs 10 --device cuda
-```
-
-Useful flags:
-
-- `--freeze-input`: train only the final linear classifier.
-- `--neurons`: reservoir size. Selection is reproducible for a given seed.
-- `--edge-threshold`: discard weak aggregate connections before selection.
-- `--train-limit` / `--test-limit`: shorter experiments.
-- `--device mps`: Apple Silicon acceleration when supported by sparse ops;
-  use `cpu` if the installed PyTorch build rejects sparse MPS operations.
-
-Artifacts are written under `runs/`: the best checkpoint, metrics JSON, and
-the exact selected neuron IDs. MNIST is downloaded by torchvision into
-`data/mnist` on first use.
-
-After training, open `classify_digits.ipynb` with Jupyter to restore the saved
-model, inspect predictions, measure test accuracy, and classify your own image.
-The notebook expects `runs/latest/best.pt`, which is the default output path of
-`train.py`. A smoke test that uses another `--output` path will not create the
-checkpoint the notebook expects.
-
-## Data provenance
+MaleCNS is a static connectome—a wiring diagram—not a pretrained artificial
+neural network or a complete executable brain. Every example must document
+which dynamics, input mapping, output mapping, and trainable parameters it
+adds to the biological connectivity data.
 
 MaleCNS v1.0 was released by HHMI Janelia, Cambridge/MRC LMB collaborators,
-and Google Research under CC BY 4.0. The script downloads the unmodified
-aggregate weights table from the official `flyem-male-cns` Google Cloud
-Storage bucket. See <https://male-cns.janelia.org/download/>.
+and Google Research under CC BY 4.0. See the
+[official dataset page](https://male-cns.janelia.org/download/).
